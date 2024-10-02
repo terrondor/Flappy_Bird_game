@@ -15,6 +15,8 @@ pygame.display.set_caption('Flappy bird')
 
 ground_scroll = 0
 scroll_speed = 4
+flaying = False
+game_over = False
 
 # Загрузка картинок
 bg = pygame.image.load('bg.png')
@@ -33,17 +35,41 @@ class Bird(pygame.sprite.Sprite):
         self.image = self.images[self.index]
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
+        self.vel = 0
+        self.clicked = False
 
     def update(self):
-        self.counter += 1
-        flap_cooldown = 5
+        # Добавляем гравитацию для птички
+        if flaying==True:
+            self.vel += 0.5
+            if self.vel > 8:
+                self.vel = 8
+            if self.rect.bottom < 768:
+                self.rect.y += int(self.vel)
 
-        if self.counter > flap_cooldown:
-            self.counter = 0
-            self.index += 1
-            if self.index >= len(self.images):
-                self.index = 0
-        self.image = self.images[self.index]
+        # добавляем взлет на нажатие клавиши мышки
+        if game_over==False:
+            if pygame.mouse.get_pressed()[0]==1 and self.clicked==False:
+                self.clicked = True
+                self.vel = -10
+            if pygame.mouse.get_pressed()[0]:
+                self.clicked = False
+
+            self.counter += 1
+            flap_cooldown = 5
+
+            if self.counter > flap_cooldown:
+                self.counter = 0
+                self.index += 1
+                if self.index >= len(self.images):
+                    self.index = 0
+            self.image = self.images[self.index]
+
+    # Придаем птице вращение (При нажатии клавиши мышки птичка задирает и опускат клюв)
+            self.image = pygame.transform.rotate(self.images[self.index], self.vel * -2)
+        else:
+            self.image = pygame.transform.rotate(self.images[self.index], -90)
+
 
 
 bird_group = pygame.sprite.Group()
@@ -61,15 +87,28 @@ while run:
 
     bird_group.draw(screen)
     bird_group.update()
+
     # Рисуем землю и подстраиваем ее
     screen.blit(ground_ing, (ground_scroll, 768))
-    ground_scroll -= scroll_speed
-    if abs(ground_scroll) > 35:
-        ground_scroll = 0
+
+    # Проверяем касается ли птичка земли при падениии
+    if flappy.rect.bottom > 768:
+        game_over = True
+        flaying = False
+        flappy.rect.bottom = 768
+
+    if not game_over:
+        ground_scroll -= scroll_speed
+        if abs(ground_scroll) > 35:
+            ground_scroll = 0
+    else:
+        scroll_speed = 0
 
     for event in pygame.event.get():
         if event.type==pygame.QUIT:
             run = False
+        if event.type==pygame.MOUSEBUTTONDOWN and not flaying and not game_over:
+            flaying = True
 
     pygame.display.update()
 
